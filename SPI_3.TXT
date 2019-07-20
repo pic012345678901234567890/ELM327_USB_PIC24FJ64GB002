@@ -1,0 +1,431 @@
+WWW.picfun.com
+出力はLATレジスタで、
+入力はPORTレジスタで行います。
+
+/// Pin Assign Input
+RPINR3bits.T3CKR = 7; 　　　　// Timer3 Ext input to RP7 pin
+RPINR7bits.IC1R = 5; 　　　　　// IC1 Input to RP5 pin
+
+PIC24FファミリのRPORxレジスタとRPnピンの配置は下表のようになっています。
+REGISTER	TOP BYTE	LOWER BYTE
+RPOR0		RP1		RP0
+RPOR1		RP3		RP2
+RPOR2		RP5		RP4
+RPOR3		RP7		RP6
+RPOR4		RP9		RP8
+RPOR5		RP11		RP10
+RPOR6		RP13		RP12
+RPOR7		RP15		RP14
+RPOR8		RP17		RP16
+RPOR9		RP19		RP18
+RPOR10		RP21		RP20
+RPOR11		RP23		RP22
+RPOR12		RP25		RP24
+
+またこの5ビットに記述する内蔵モジュールの出力機能番号は下表のように決められています。
+
+Features   Output Number	OUTPUT NAME
+NULL		0		NULL
+C1OUT		1		COMPARATOR1 OUT
+C2OUT		2		COMPARATOR2 OUT
+U1TX		3		UART1 OUT
+U1RTS		4		UART1 RTS
+U2TX		5		UART2  OUT
+U2RTS		6		UART2 RTS
+SDO1		7		SPI1 DATAOUT
+SCK1OUT		8		SPI1 CLOCK
+SS1OUT		9		SPI1 SLAVE OUT
+SDO2		10		SPI2 DATAOUT
+SCK2OUT		11		SPI2 CLOCK
+SS2OUT		12		SPI2 SLAVE OUT
+OC1		18		COMPARE1 OUT
+OC2		19		COMPARE2 OUT
+OC3		20		COMPARE3 OUT
+OC4		21		CONPARE4 OUT
+OC5		22		CONPARE5 OUT
+
+
+
+C30での記述の仕方は下記のようになります。
+
+/// Pin Assign Output
+RPOR4bits.RP8R = 18;　　　 // OC1 out to RP8 pin
+RPOR3bits.RP6R = 19; 　　　// OC2 out to RP6 pin
+
+-------------------------------------------------------
+例えばクロック周波数32MHz、つまりTcy=1/16usec、分周比1/256のとき
+100msec周期のタイマとするにはPRxを下記で求めます。1msecは1000usecですから
+次の式でPRxの設定値が求められます。
+
+1000÷((1/16)×256) - 1 = 61.5(61 or 62)
+
+---------------------------------------------------------------------------
+
+ANSELB = 0;　　　　//すべてデジタル
+　　　TRISB = 0;　　 　　//全て出力モード
+　　　LATAB = 0x65;　　　//01100101を出力する
+
+　入力の場合には下記のようになります。
+
+　　　ANSELB = 0;　　　　　　　　 //すべてデジタル
+　　　ANSELC = 0;
+　　　TRISC = 0x0F;　　　　　　　 // RC0-RC3が入力
+　　　TRISB = 0;　　　　　　　　　//ポートBすべて出力
+　　　if(PORTCbits.RC0 == 1)　 　//Offの場合
+　　　　　LATBbits.LATB0 ^= 1;　 //ポートBの1ビット目反転
+　　　else
+　　　　　LATBbits.LATB1 ^= 1;　 //ポートBの2ビット目反転
+
+ANSLEB = 0;　　　　　　　　　//すべてデジタル
+　　　TRISB = 0x0F;　　　　 　　　 // RB0-RB3を入力とする
+　　　WPUB = 0x0F;　　　　　　　　 // RB0-RB3をプルアップする
+　　　OPTION_REGbits.nWPUEN = 0;　//プルアップ有効化
+
+ANSELB = 0;　　　　　　　//すべてデジタル
+　　　　TRISB = 0x0F;　　　　　　//RB0-RB3を入力ピンにする
+　　　　IOCBP = 0x0F;　　　　　　//立ち上がり検出有効化
+　　　　IOCBN = 0x0F;　　　　　　//立下り検出有効化
+
+　　　　INTCONbits.IOCIE = 1;　　//状態変化割り込み許可
+　　　　INTCONbits.PEIE = 1;　　//周辺一括割り込み許可
+　　　　INTCONbits.GIE = 1;　　//全体割り込み許可
+
+------------------------------------------------------------------------
+(1) 最高速度
+　　・最高32MHzクロックで　16MIPSの性能
+　　・8MHzの内蔵クロックで、PLLで4倍して最高性能が出せる
+(2) 高速演算性能
+　　・17ビット×17ビットの乗算器で、乗算が1サイクル(63nsec)で完了
+　　・除算支援ハードも内蔵し、32ビット÷16ビットが、19サイクルで完了
+(3) 大きなメモリサイズ
+　　・プログラムメモリ　：　32kバイト ～ 128kバイト　フラッシュ
+　　　　　　書換え回数　：　最大１万回の書き込み/消去　20年保持
+　　・データメモリ　　　　：　4kバイト ～ 16kバイト
+(4) ピン数とパッケージ
+　　・28、44、64、80、100ピン　
+　　・DIP、SSOP、TQFP、ML
+(5) 電源電圧と消費電流
+　　・2.2V～3.6V
+　　　(CPUコアは2.0V ～ 2.75Vで専用レギュレータを内蔵)
+　　・消費電流　(電源3.3V)
+　　　　スリープ時　：　3.3μA ～ 27μA
+　　　　　１MISP時　：　1.2mA ～ 4.0mA
+　　　　　4MISP時　：　6.0mA ～ 12mA
+　　　 　16MISP時　：　20mA ～ 32mA
+(6) Cコンパイラに最適化した命令
+　　・基本　76命令
+　　・アドレッシングモード豊富
+(7) 柔軟なピン配置可能なI/Oピン
+　　・ピン割付機能
+　　　　　内蔵モジュールの入出力ピンを自由に配置可能
+　　　　　（アナログ入力、I2C、I/Oポートは固定）
+　　・デジタル入出力ピン　：　シンク・ソースともMax18mAドライブ可能
+　　　　　　　　　　　　　　　　　　オープンドレイン出力可能
+　　　　　　　　　　　　　　　　　　5V入力可能(Max5.5V)
+(8) 豊富な周辺モジュール
+　　・A/D　　：　高速10ビットA/Dコンバータ　　500ksps
+　　・CMP　　：　2系統のアナログ コンパレータ
+　　・PMP　　：　8ビットパラレルマスタポート　：　8ビット並列のハンドシェイク通信可能
+　　・RTCC　：　ハードウェア リアルタイムクロック　年月日時分秒カウント
+　　　　　　　　　　閏年も自動カウント　外付け32kHzのクリスタル発振
+　　・CRC　　：　CRC巡回符号チェックの自動計算
+　　・SPI　　　：　２チャネル
+　　・I2C　　　：　２チャネル
+　　・UART　 ：　２チャネル　　IrDAエンコーダ／デコーダ内蔵
+　　・TIMER　：　５個の16ビットタイマ　　32ビットタイマに結合可能
+　　・OC　　　：　５系統の16ビット出力コンペア　　PWM出力可能
+　　・IC　　　　：　５系統の16ビット入力キャプチャ　
+
+【デバイス一覧】
+現在入手可能なPIC24Fシリーズで28ピンと44ピンの少ピンのタイプは下記の
+ようになっています。今後新たな製品が追加されていく予定です。
+品名で区別が付くようになっていて　下記のようになっています。
+
+　　　PIC24FJxxGAyyy
+　　　　　xx：メモリサイズ　　16=16kB　　32=32kB　　48=48kB　　64=64kB
+　　　　　yyy：ピン数　　　　001=18ピン　　002=28ピン　　004=44ピン
+　　　　　　　　　　　　　　　　006=64ピン　　008=80ピン　　010=100ピン
+
+---------------------------------------------------------------------------
+http://amahime.main.jp/pic24f/main.php?name=pic24f
+
+PIC24FJ64GA002の入出力ピンにはCPUの機能を任意に設定できます。どういうことかと言うと、「このピンにこの機能を付ける」と自分で決めれるという事です。 これはとても便利な機能で、部品を配置する際にも強制的に割付られていない事から配置が楽になります。 しかし、これはPIC16FやPIC18Fに無かった機能なのでPIC24Fを使用する場合は新たに習得する必要があります。 覚えるのは難しいと思いますので表にして掲載しておく事にします。ほとんど自分用の覚書です。
+　
+ピン入力割付の表は下記のようになります。
+モジュール名
+機能
+レジスタ
+ビット
+SPI1データ入力
+SDI1
+RPINR20
+SDI1R
+SPI1クロック入力
+SCK1IN
+RPINR20
+SCK1R
+SPI1スレーブ選択入力
+SS1IN
+RPINR21
+SS1R
+SPI2データ入力
+SDI2
+RPINR22
+SDI2R
+SPI2クロック入力
+SCK2IN
+RPINR22
+SCK2R
+SPI2スレーブ選択入力
+SS2IN
+RPINR23
+SS2R
+UART1入力
+U1RX
+RPINR18
+U1RXR
+UART1CTS入力
+U1CTS
+RPINR18
+U1CTSR
+UART2入力
+U2RX
+RPINR19
+U2RXR
+UART2CTS入力
+U2CTS
+RPINR19
+U2CTSR
+外部割込み1
+INT1
+RPINR0
+INTR1
+外部割込み2
+INT2
+RPINR1
+INT2R
+タイマ2外部clock
+T2CK
+RPINR3
+T2CKR
+タイマ3外部clock
+T3CK
+RPINR3
+T3CKR
+タイマ4外部clock
+T4CK
+RPINR4
+T4CKR
+タイマ5外部clock
+T5CK
+RPINR4
+T5CKR
+入力キャプチャ1
+IC1
+RPINR7
+IC1R
+入力キャプチャ2
+IC2
+RPINR7
+IC2R
+入力キャプチャ3
+IC3
+RPINR8
+IC3R
+入力キャプチャ4
+IC4
+RPINR8
+IC4R
+入力キャプチャ5
+IC5
+RPINR9
+IC5R
+出力コンペア入力A
+OCFA
+RPINR11
+OCFAR
+出力コンペア入力B
+OCFB
+RPINR11
+OCFBR
+設定方法：レジスタ.ビット=ＲＰｘｘ
+設定例：RP9をSPI1データ入力に設定する場合
+RPINR20.SDI1R = 9; //RP9の9だけを記載する
+　
+ピン出力割り当ては入力とは逆にピンに機能を割り当てます。
+ピンの指定
+レジスタ
+上位
+下位
+RPOR0
+RP1
+RP0
+RPOR1
+RP3
+RP2
+RPOR2
+RP5
+RP4
+RPOR3
+RP7
+RP6
+RPOR4
+RP9
+RP8
+RPOR5
+RP11
+RP10
+RPOR6
+RP13
+RP12
+RPOR7
+RP15
+RP14
+RPOR8
+RP17
+RP16
+RPOR9
+RP19
+RP18
+RPOR10
+RP21
+RP20
+RPOR11
+RP23
+RP22
+RPOR12
+RP25
+RP24
+機能番号
+機能名
+機能番号
+モジュール名
+NULL
+0
+NULL
+コンパレータ1出力
+1
+C1OUT
+コンパレータ2出力
+2
+C2OUT
+UART1送信
+3
+U1TX
+UART1　RTS
+4
+U1RTS
+UART2送信
+5
+U2TX
+UART2　RTS
+6
+U2RTS
+SPI1データ出力
+7
+SDO1
+SPI1clock出力
+8
+SCK1OUT
+SPI1スレーブ出力
+9
+SS1OUT
+SPI2データ出力
+10
+SDO2
+SPI2clock出力
+11
+SCK2OUT
+SPI2スレーブ出力
+12
+SS2OUT
+出力コンペア1
+18
+OC1
+出力コンペア2
+19
+OC2
+出力コンペア3
+20
+OC3
+出力コンペア4
+21
+OC4
+出力コンペア5
+22
+OC5
+設定方法：ピンを指定し、そこに機能を割り当てます。　RPORx.RPx=0～22
+設定例：RP8にSPI1データ出力を設定する場合
+RPOR4.RP8 = 7; //RP8はRPOR4でSPIデータ出力は「7」です。
+　
+内部プルアップの設定はRPxピン1本毎に行えます。
+上位bit
+15
+14
+13
+12
+11
+10
+9
+8
+CNPU1
+CN15
+CN14
+CN13
+CN12
+CN11
+CN10
+CN9
+CN8
+CNPU2
+non
+CN30
+CN29
+CN28
+CN27
+CN26
+CN25
+CN24
+下位bit
+7
+6
+5
+4
+3
+2
+1
+0
+CNPU1
+CN7
+CN6
+CN5
+CN4
+CN3
+CN2
+CN1
+CN0
+CNPU2
+CN23
+CN22
+CN21
+CN20
+CN19
+CN18
+CN17
+CN16
+PinDiagramsのピン配置にCNxxと記載されている所が上の表とマッチします。
+例えばPIC24FJ64GA002のRP14をプルアップしたい場合はCN12となっているので、CNPU1のCN12を「1」にすればRP14がプルアップされます。
+　
+記載方法：CNPU1 = 0x1000;//0001000000000000
+
+
+機能名		機能番号	モジュール名
+SPI1データ出力		7	SDO1
+SPI1clock出力		8	SCK1OUT
+
+RPOR4.RP8 = 7; //RP8はRPOR4でSPIデータ出力は「7」です。
+
+例えばPIC24FJ64GA002のRP14をプルアップしたい場合は
+CN12となっているので、CNPU1のCN12を「1」にすればRP14がプルアップされます。
+　
+記載方法：CNPU1 = 0x1000;//0001000000000000
